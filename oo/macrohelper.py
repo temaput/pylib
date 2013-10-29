@@ -9,7 +9,8 @@ used inside macroses and from remote procs
 
 
 import uno
-
+import logging
+log = logging.getLogger(__name__)
 
 class StarBasicGlobals:
     def __init__(self, context):
@@ -46,9 +47,59 @@ class StarBasicGlobals:
         return dp.createDialog(
                 "vnd.sun.star.script:{uri}?location=user".format(uri=uri))
 
+    def InputBox(self, message, title=""):
+        """ Create simple imput dialog programaticaly"""
+        from summerfield.SortedDict import SortedDict
+        parent = self.StarDesktop.getCurrentFrame().getContainerWindow()
+        toolkit = parent.getToolkit()
+        dialog = self._smgr.createInstanceWithContext(
+                "com.sun.star.awt.UnoControlDialog", self._ctx)
+        dialogModel = self._smgr.createInstanceWithContext(
+                "com.sun.star.awt.UnoControlDialogModel", self._ctx)
+        dialog.setModel(dialogModel)
+        modelDict = SortedDict()
+        modelDict['Name'] = 'InputBox'
+        modelDict['Title'] = title
+        # we also should prescribe Width, Height, X and YPosition
+        dialogModel.setPropertyValues(tuple(modelDict.keys()),
+                tuple(modelDict.values()))
+
+
+        # now lets print in the message as simple label
+        label = dialogModel.createInstance(
+                "com.sun.star.awt.UnoControlFixedTextModel")
+        modelDict.clear()
+        modelDict['Name'] = "Message"
+        modelDict['PositionX'] = 5
+        modelDict['PositionY'] = 5
+        modelDict['Width'] = 100
+        modelDict['Height'] = 8
+
+        label.setPropertyValues(tuple(modelDict.keys()), tuple(modelDict.values()))
+        log.debug("label is %s", label)
+        dialogModel.insertByName("Message", label)
+        control = dialog.getControl("Message")
+        log.debug("control is %s", control)
+        control.setText(message)
+        
+       
+
+
+
+
+        dialog.createPeer(toolkit, parent)
+        dialog.execute()
+        dialog.dispose()
+
+
+        
+
+    
+
+        
     def MsgBox(self, message, title="", message_type="infobox", buttons=1):
         """ Show message in message box. """
-        parent = self.StarDesktop().getCurrentFrame().getContainerWindow()
+        parent = self.StarDesktop.getCurrentFrame().getContainerWindow()
         toolkit = parent.getToolkit()
         older_imple = self._check_method_parameter(
                 "com.sun.star.awt.XMessageBoxFactory", "createMessageBox",

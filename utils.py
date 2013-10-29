@@ -8,42 +8,45 @@ log = logging.getLogger(__name__)
 # class decorators
 #
 
-def delegate(what, how=None, whom=None):
-    """ decorator that makes easy wrapping of similar methods
-        what - name of delegated method, e.g. '__add__'
-        how - reference to the wrapping method
-        whom - reference to the real worker class, that will actually do the 
-        job
+
+
+def delegate(methodnames, wrapper=None, attrname=None):
+    """ decorates class with methods in methodnames
+        methods are references to the same methods in
+        attrname object (if given), or in parent class
+        if wrapper (func reference) is given 
+        than the result of these methods will be passed to it first 
+
+        using this class decorator makes the effect of decorating each
+        class method i.e.
+
+        @delegate(('add', 'sub'), wrapper, 'obj') 
+        class...:
+
+        is the same as to say
+
+        class ...:
+        @wrapper
+        def add(self):
+            return obj.add()
+
+        @wrapper
+        def sub(self):
+            return obj.sub()
     """
-    def decorator(cls):
-        if how is None and whom is None: return cls  # nothing to do here
-        for _method in what:
-            if not hasattr(cls, _method):
-                if not how:  # by default we make simple redirect
-                    setattr(cls, _method, lambda self, *args, **kwargs: 
-                                getattr(whom, _method)(*args, **kwargs))
-                else: setattr(cls, _method, how(whom))
-
-
-        return cls
-    return decorator
-                    
-def wrapsimilar(wrapperfunc, methodnames, callee=None):
-    log.debug("wrapperfunc is %s, callee is %s", wrapperfunc, callee)
-    def checkcallee(obj):
-        if callee:
-            return getattr(obj, callee)
-        else:
-            return None
-
-    def decorator(cls):
+    if wrapper is None and attrname is None: 
+        return lambda cls: cls 
+    result_wrapper = wrapper or (lambda result: result)
+    def func_decorator(cls, mname):
+        def func_wrapper(self, *args, **kwargs):
+            return result_wrapper(
+                getattr(
+                getattr(self, attrname) if attrname else super(cls, self), 
+                mname)(*args, **kwargs))
+        return func_wrapper
+    def class_decorator(cls):
         for mname in methodnames:
-            setattr(cls, mname, wrapperfunc(mname, checkcallee))
+                setattr(cls, mname, func_decorator(cls, mname))
         return cls
-    return decorator
-
-    
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+    return class_decorator
+                    

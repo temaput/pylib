@@ -84,26 +84,16 @@ class XNameAccess(dict):
 from datetime import datetime
 from com.sun.star.util import Date as unoDate
 from com.sun.star.util import DateTime as unoDateTime
+from tema.utils import delegate
 
-def _wrapspecial(bases, methodname):
-    def _method(self, *args, **kwargs):
-        method = getattr(super(UnoDateConverter, self), methodname)
-        result = method(*args, **kwargs)
-        if type(result) == bases[0]:
-            return self.fromDateTime(result)
-        else:
-            return result
-    return _method
+def _wrapspecials(result):
+    if type(result) == datetime:
+        return UnoDateConverter.fromDateTime(result)
+    else:
+        return result
 
-
-class metaUnoDate(type):
-    def __new__(cls, classname, bases, classdict):
-        for method in ('__add__', '__radd__', '__sub__', '__rsub__'):
-            classdict[method] = _wrapspecial(bases, method)
-        return type.__new__(cls, classname, bases, classdict)
-
-
-class UnoDateConverter(datetime, metaclass=metaUnoDate):
+@delegate(('__add__', '__radd__', '__sub__', '__rsub__'), _wrapspecials)
+class UnoDateConverter(datetime):
     """ Makes easy conversion between python datetime.datetime and
     OO com.sun.star.util Date and DateTime 
 
@@ -139,7 +129,6 @@ class UnoDateConverter(datetime, metaclass=metaUnoDate):
 
     """
 
-    __metaclass__ = metaUnoDate
     members = (
                 ('year', 'Year'),
                 ('month', 'Month'),
