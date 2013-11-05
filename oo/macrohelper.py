@@ -4,14 +4,30 @@ Makes writing macroses with python more comfortable
 Takes XSCRIPTCONTEXT or ComponentContext to generate all other objects, so it can  be
 used inside macroses and from remote procs
 
-
 """
 
-
-import uno
 import logging
 log = logging.getLogger(__name__)
+import uno
 
+import dialogapi
+
+
+class InputBox(dialogapi.unoDialog):
+
+    def setProperties(self, **kwargs):
+        properties = dict(
+                Name = 'InputBox'
+                )
+        properties.update(kwargs)
+        return properties
+
+    def construct(self, **kwargs):
+        self.labelControl = self.insertLabel(kwargs.get('message', ''),
+                PositionX = 5, PositionY = 5, Width = 100, Height = 8)
+        self.btnOK = self.insertButton('OK', 'OK', PositionX=100, PositionY=100,
+                Height=14, Width=40, DefaultButton=True)
+        
 class StarBasicGlobals:
     def __init__(self, context):
         self._givenctx = context
@@ -20,7 +36,7 @@ class StarBasicGlobals:
     def _preload(self):
         c = self._givenctx
         if hasattr(c, 'getDesktop'):  # context is XSCRIPTCONTEXT
-            self.StarDesktop = c.getDesktop
+            self.StarDesktop = c.getDesktop()
             self.GetDefaultContext = c.getComponentContext
             self.ThisComponent = c.getDocument()
         elif hasattr(c, 'ServiceManager'):  # context is StarOffice.ComponentContext
@@ -47,55 +63,11 @@ class StarBasicGlobals:
         return dp.createDialog(
                 "vnd.sun.star.script:{uri}?location=user".format(uri=uri))
 
-    def InputBox(self, message, title=""):
+    def InputBox(self, message, title="Input"):
         """ Create simple imput dialog programaticaly"""
-        from summerfield.SortedDict import SortedDict
         parent = self.StarDesktop.getCurrentFrame().getContainerWindow()
-        toolkit = parent.getToolkit()
-        dialog = self._smgr.createInstanceWithContext(
-                "com.sun.star.awt.UnoControlDialog", self._ctx)
-        dialogModel = self._smgr.createInstanceWithContext(
-                "com.sun.star.awt.UnoControlDialogModel", self._ctx)
-        dialog.setModel(dialogModel)
-        modelDict = SortedDict()
-        modelDict['Name'] = 'InputBox'
-        modelDict['Title'] = title
-        # we also should prescribe Width, Height, X and YPosition
-        dialogModel.setPropertyValues(tuple(modelDict.keys()),
-                tuple(modelDict.values()))
-
-
-        # now lets print in the message as simple label
-        label = dialogModel.createInstance(
-                "com.sun.star.awt.UnoControlFixedTextModel")
-        modelDict.clear()
-        modelDict['Name'] = "Message"
-        modelDict['PositionX'] = 5
-        modelDict['PositionY'] = 5
-        modelDict['Width'] = 100
-        modelDict['Height'] = 8
-
-        label.setPropertyValues(tuple(modelDict.keys()), tuple(modelDict.values()))
-        log.debug("label is %s", label)
-        dialogModel.insertByName("Message", label)
-        control = dialog.getControl("Message")
-        log.debug("control is %s", control)
-        control.setText(message)
-        
-       
-
-
-
-
-        dialog.createPeer(toolkit, parent)
-        dialog.execute()
-        dialog.dispose()
-
-
-        
-
-    
-
+        inp = InputBox(self._ctx, self._smgr, parent, Title=title)
+        inp.show()
         
     def MsgBox(self, message, title="", message_type="infobox", buttons=1):
         """ Show message in message box. """
