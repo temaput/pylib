@@ -1,5 +1,5 @@
 """ my version of summerfield utils, 
-some usefull funcs for imstrumental"""
+some usefull funcs for instrumental"""
 
 import logging
 log = logging.getLogger(__name__)
@@ -50,3 +50,25 @@ def delegate(methodnames, wrapper=None, attrname=None):
         return cls
     return class_decorator
                     
+
+
+#
+# sys utils
+#
+
+def removeany(path, ignore_errors=False):
+    from os.path import isdir, exists
+    from shutil import rmtree
+    from os import remove
+    if not exists(path):
+        return
+    try:
+        if isdir(path):
+            rmtree(path)
+        else:
+            remove(path)
+    except OSError as e:
+        if not ignore_errors:
+            raise
+        else:
+            return e.strerror

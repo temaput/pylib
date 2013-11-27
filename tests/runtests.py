@@ -58,6 +58,26 @@ class TestDecorators(unittest.TestCase):
         s = Sub()
         self.assertEqual(s - 1, '0')
 
+class TestFunctions(unittest.TestCase):
+    """ Here we test simple functions from utils e.g. removeany"""
+
+    def testRemoveAny(self):
+        from os import makedirs
+        from os.path import dirname, join, exists
+        path = join(dirname(__file__), 'test1')
+        longpath = join(path, 'test2/test3')
+        makedirs(longpath)
+        fn = 'test.tmp'
+        with open(join(longpath, fn), 'w') as f:
+            f.write('test file')
+        with open(join(path, fn), 'w') as f:
+            f.write('test file')
+
+        from tema.utils import removeany
+        removeany(join(path, fn))
+        self.assertFalse(exists(join(path, fn)))
+        removeany(path)
+        self.assertFalse(exists(path))
 
 
 if __name__ == '__main__':
